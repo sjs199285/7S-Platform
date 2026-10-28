@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>7S管理平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #667eea;
+            --primary-dark: #4338ca;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg: #f0f2f5;
+            --card: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* 配置提示 */
+        .config-notice {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .config-notice h2 {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .config-notice ol {
+            margin-left: 20px;
+            line-height: 2;
+        }
+
+        .config-notice a {
+            color: white;
+            font-weight: bold;
+        }
+
+        .config-notice .btn-config {
+            background: white;
+            color: var(--warning);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .config-form {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px;
+            display: none;
+        }
+
+        .config-form.active {
+            display: block;
+        }
+
+        .config-form input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+
+        .config-form button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        /* 登录页 */
+        .login-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .login-page.hidden {
+            display: none;
+        }
+
+        .login-logo {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .login-title {
+            color: white;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .login-subtitle {
+            color: rgba(255,255,255,0.85);
+            font-size: 0.95em;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px 25px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.9em;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1em;
+            transition: all 0.3s;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+        }
+
+        .login-error {
+            color: var(--danger);
+            font-size: 0.9em;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        /* 主应用 */
+        .app {
+            display: none;
+            min-height: 100vh;
+            padding-bottom: 70px;
+        }
+
+        .app.active {
+            display: block;
+        }
+
+        /* 顶部 */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            padding-top: calc(15px + env(safe-area-inset-top));
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .header-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-points {
+            background: rgba(255,255,255,0.25);
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+
+        /* 页面 */
+        .page {
+            display: none;
+            padding: 20px;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 统计卡片 */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 18px 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-box .stat-icon {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .stat-box .stat-value {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-box .stat-label {
+            font-size: 0.75em;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* 卡片 */
+        .card {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 表单 */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85em;
+            color: var(--text-light);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .form-group label .required {
+            color: var(--danger);
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95em;
+            background: white;
+            transition: all 0.3s;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.7;
+        }
+
+        /* 列表 */
+        .record-list {
+            list-style: none;
+        }
+
+        .record-item {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary);
+        }
+
+        .record-item.safety { border-left-color: var(--danger); }
+        .record-item.sort { border-left-color: #3b82f6; }
+        .record-item.clean { border-left-color: var(--success); }
+        .record-item.organize { border-left-color: var(--warning); }
+        .record-item.discipline { border-left-color: #8b5cf6; }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .record-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 500;
+        }
+
+        .tag-safety { background: #fee2e2; color: #dc2626; }
+        .tag-sort { background: #dbeafe; color: #2563eb; }
+        .tag-clean { background: #d1fae5; color: #059669; }
+        .tag-organize { background: #fef3c7; color: #d97706; }
+        .tag-discipline { background: #ede9fe; color: #7c3aed; }
+
+        .record-time {
+            font-size: 0.75em;
+            color: var(--text-light);
+        }
+
+        .record-desc {
+            font-size: 0.9em;
+            color: var(--text);
+            line-height: 1.5;
+        }
+
+        .record-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+            font-size: 0.8em;
+            color: var(--text-light);
+            flex-wrap: wrap;
+        }
+
+        /* 排行榜 */
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            background: var(--card);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .leaderboard-item.top-1 {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 2px solid #f59e0b;
+        }
+
+        .leaderboard-item.top-2 {
+            background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+            border: 2px solid #9ca3af;
+        }
+
+        .leaderboard-item.top-3 {
+            background: linear-gradient(135deg, #fed7aa, #fdba74);
+            border: 2px solid #ea580c;
+        }
+
+        .leaderboard-rank {
+            width: 45px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .leaderboard-name {
+            flex: 1;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .leaderboard-points {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.08);
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            padding: 5px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-light);
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-item .nav-icon {
+            font-size: 1.5em;
+        }
+
+        .nav-item .nav-label {
+            font-size: 0.7em;
+        }
+
+        /* 消息提示 */
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card);
+            padding: 14px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 2000;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            max-width: 90%;
+        }
+
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translate(-50%, -20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translate(-50%, 0); }
+            to { opacity: 0; transform: translate(-50%, -20px); }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        /* 成功弹窗 */
+        .dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .dialog-overlay.active {
+            display: flex;
+        }
+
+        .dialog {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 350px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .dialog-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .dialog-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+
+        .dialog-message {
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+
+        .dialog-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- 配置提示（首次使用） -->
+    <div id="configNotice">
+        <div class="config-notice">
+            <h2>⚙️ 首次使用配置</h2>
+            <p>需要连接Supabase云数据库，按以下步骤操作：</p>
+            <ol>
+                <li>打开 <a href="https://supabase.com" target="_blank">supabase.com</a> 注册账号（免费）</li>
+                <li>创建新项目，选择区域（推荐 Singapore）</li>
+                <li>在 SQL Editor 执行 <code>数据库初始化.sql</code></li>
+                <li>复制项目的 URL 和 anon key</li>
+                <li>点击下方按钮填入配置</li>
+            </ol>
+            <button class="btn-config" onclick="showConfigForm()">填写配置信息</button>
+        </div>
+
+        <div class="config-form" id="configForm">
+            <h3 style="margin-bottom: 15px;">填写 Supabase 配置</h3>
+            <input type="text" id="supabaseUrl" placeholder="Supabase URL (https://xxx.supabase.co)">
+            <input type="text" id="supabaseKey" placeholder="Supabase anon key">
+            <button onclick="saveConfig()">保存并开始使用</button>
+        </div>
+    </div>
+
+    <!-- 登录页 -->
+    <div class="login-page hidden" id="loginPage">
+        <div class="login-logo">🏭</div>
+        <h1 class="login-title">7S管理平台</h1>
+        <p class="login-subtitle">请输入工号和姓名登录</p>
+        
+        <div class="login-card">
+            <div class="form-group">
+                <label>工号</label>
+                <input type="text" id="loginEmpno" placeholder="请输入工号" maxlength="20">
+            </div>
+            <div class="form-group">
+                <label>姓名</label>
+                <input type="text" id="loginName" placeholder="请输入姓名" maxlength="20">
+            </div>
+            <button class="btn-login" id="btnLogin" onclick="doLogin()">登 录</button>
+            <div class="login-error" id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- 主应用 -->
+    <div class="app" id="app">
+        <header class="header">
+            <div class="header-top">
+                <div class="header-title">📋 7S管理平台</div>
+                <div class="header-user">
+                    <div class="user-points">⭐ <span id="headerPoints">0</span></div>
+                    <button class="btn-logout" onclick="doLogout()">退出</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 首页 -->
+        <div class="page active" id="page-home">
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">总缺失</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-value" id="statMyPoints">0</div>
+                    <div class="stat-label">我的积分</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">🏆</div>
+                    <div class="stat-value" id="statMyRank">-</div>
+                    <div class="stat-label">我的排名</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">🏆 积分排行榜 TOP 5</div>
+                <div id="topLeaderboard"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📝 最新录入</div>
+                <ul class="record-list" id="recentRecords"></ul>
+            </div>
+        </div>
+
+        <!-- 录入页 -->
+        <div class="page" id="page-entry">
+            <div class="card">
+                <div class="card-title">✍️ 录入7S缺失</div>
+                <form id="entryForm" onsubmit="submitEntry(event)">
+                    <div class="form-group">
+                        <label>7S分类 <span class="required">*</span></label>
+                        <select id="sevenSCategory" required>
+                            <option value="">请选择</option>
+                            <option value="整理">整理 (Seiri)</option>
+                            <option value="整顿">整顿 (Seiton)</option>
+                            <option value="清扫">清扫 (Seiso)</option>
+                            <option value="清洁">清洁 (Seiketsu)</option>
+                            <option value="素养">素养 (Shitsuke)</option>
+                            <option value="安全">安全 (Safety)</option>
+                            <option value="节约">节约 (Save)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>制程/部门 <span class="required">*</span></label>
+                        <select id="department" required>
+                            <option value="">请选择</option>
+                            <option value="壓鑄">壓鑄</option>
+                            <option value="壓鑄維修">壓鑄維修</option>
+                            <option value="壓鑄拋丸">壓鑄拋丸</option>
+                            <option value="壓鑄精修">壓鑄精修</option>
+                            <option value="壓鑄震研">壓鑄震研</option>
+                            <option value="壓鑄模修">壓鑄模修</option>
+                            <option value="機加">機加</option>
+                            <option value="機加维修">機加维修</option>
+                            <option value="廠務">廠務</option>
+                            <option value="生技">生技</option>
+                            <option value="二加AI檢測">二加AI檢測</option>
+                            <option value="二加測漏打碼">二加測漏打碼</option>
+                            <option value="二加清洗">二加清洗</option>
+                            <option value="二加無塵室">二加無塵室</option>
+                            <option value="資材倉管">資材倉管</option>
+                            <option value="消防">消防</option>
+                            <option value="行政">行政</option>
+                            <option value="模具">模具</option>
+                            <option value="PQC">PQC</option>
+                            <option value="品保LAB">品保LAB</option>
+                            <option value="品保OQC">品保OQC</option>
+                            <option value="安環">安環</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>位置 <span class="required">*</span></label>
+                        <input type="text" id="location" placeholder="例如: P栋压铸车间A区" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>问题点类别</label>
+                        <select id="issueType">
+                            <option value="">请选择</option>
+                            <option value="環境">環境</option>
+                            <option value="設備設施">設備設施</option>
+                            <option value="電氣">電氣</option>
+                            <option value="職業健康">職業健康</option>
+                            <option value="化學品">化學品</option>
+                            <option value="粉塵">粉塵</option>
+                            <option value="金屬熔融">金屬熔融</option>
+                            <option value="消防">消防</option>
+                            <option value="特種設備">特種設備</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>问题描述 <span class="required">*</span></label>
+                        <textarea id="description" placeholder="请详细描述发现的7S问题..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="btnSubmit">✅ 提交录入 (+1积分)</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 记录页 -->
+        <div class="page" id="page-records">
+            <div class="card">
+                <div class="card-title">📋 全部记录</div>
+                <ul class="record-list" id="allRecords"></ul>
+                <div class="empty-state" id="recordsEmpty" style="display:none;">
+                    <div class="empty-icon">📭</div>
+                    <p>暂无记录</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 排行榜页 -->
+        <div class="page" id="page-ranking">
+            <div class="card">
+                <div class="card-title">🏆 积分排行榜</div>
+                <div id="fullLeaderboard"></div>
+                <div class="empty-state" id="rankingEmpty" style="display:none;">
+                    <div class="empty-icon">🏆</div>
+                    <p>暂无数据</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 我的页 -->
+        <div class="page" id="page-my">
+            <div class="card">
+                <div class="card-title">👤 我的信息</div>
+                <div style="text-align:center; padding: 20px 0;">
+                    <div style="font-size: 3em; margin-bottom: 10px;">👤</div>
+                    <div style="font-size: 1.3em; font-weight: bold; color: var(--text);" id="myName">-</div>
+                    <div style="color: var(--text-light); margin-top: 5px;" id="myEmpno">-</div>
+                    <div style="margin-top: 15px; font-size: 1.5em; color: var(--primary);">
+                        ⭐ <span id="myPoints">0</span> 积分
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📁 我的录入记录</div>
+                <ul class="record-list" id="myRecords"></ul>
+                <div class="empty-state" id="myEmpty" style="display:none;">
+                    <div class="empty-icon">📭</div>
+                    <p>还没有录入记录</p>
+                    <button class="btn-submit" style="margin-top: 15px; max-width: 200px; margin-left: auto; margin-right: auto;" onclick="switchPage('entry')">去录入</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部导航 -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="switchPage('home', this)">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">首页</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('entry', this)">
+                <span class="nav-icon">📝</span>
+                <span class="nav-label">录入</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('records', this)">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">记录</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('ranking', this)">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-label">排行</span>
+            </div>
+            <div class="nav-item" onclick="switchPage('my', this)">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">我的</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 成功弹窗 -->
+    <div class="dialog-overlay" id="successDialog">
+        <div class="dialog">
+            <div class="dialog-icon">🎉</div>
+            <div class="dialog-title">录入成功！</div>
+            <div class="dialog-message" id="dialogMessage">+1积分</div>
+            <button class="dialog-btn" onclick="closeDialog()">确定</button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Supabase配置 ====================
+        let supabase = null;
+        let currentUser = null;
+
+        // 检查配置
+        function checkConfig() {
+            const url = localStorage.getItem('supabase_url');
+            const key = localStorage.getItem('supabase_key');
+            
+            if (url && key) {
+                initSupabase(url, key);
+                return true;
+            }
+            return false;
+        }
+
+        function initSupabase(url, key) {
+            supabase = window.supabase.createClient(url, key);
+        }
+
+        function showConfigForm() {
+            document.getElementById('configForm').classList.add('active');
+        }
+
+        function saveConfig() {
+            const url = document.getElementById('supabaseUrl').value.trim();
+            const key = document.getElementById('supabaseKey').value.trim();
+            
+            if (!url || !key) {
+                alert('请填写完整的配置信息');
+                return;
+            }
+            
+            localStorage.setItem('supabase_url', url);
+            localStorage.setItem('supabase_key', key);
+            initSupabase(url, key);
+            
+            document.getElementById('configNotice').style.display = 'none';
+            document.getElementById('loginPage').classList.remove('hidden');
+            
+            showToast('配置成功！', 'success');
+        }
+
+        // ==================== 登录 ====================
+        async function doLogin() {
+            const empno = document.getElementById('loginEmpno').value.trim();
+            const name = document.getElementById('loginName').value.trim();
+            const errorDiv = document.getElementById('loginError');
+            const btn = document.getElementById('btnLogin');
+            
+            if (!empno || !name) {
+                errorDiv.textContent = '请输入工号和姓名';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            btn.innerHTML = '<span class="loading"></span>';
+            btn.disabled = true;
+            errorDiv.style.display = 'none';
+            
+            try {
+                // 查找或创建用户
+                let { data: user, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('empno', empno)
+                    .eq('name', name)
+                    .single();
+                
+                if (error || !user) {
+                    // 创建新用户
+                    const { data: newUser, error: insertError } = await supabase
+                        .from('users')
+                        .insert({ empno, name, points: 0 })
+                        .select()
+                        .single();
+                    
+                    if (insertError) throw insertError;
+                    user = newUser;
+                }
+                
+                currentUser = user;
+                localStorage.setItem('7s_user', JSON.stringify(user));
+                
+                btn.innerHTML = '登 录';
+                btn.disabled = false;
+                
+                enterApp();
+                showToast(`欢迎, ${name}!`, 'success');
+            } catch (err) {
+                console.error(err);
+                btn.innerHTML = '登 录';
+                btn.disabled = false;
+                errorDiv.textContent = '登录失败，请重试';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function enterApp() {
+            document.getElementById('configNotice').style.display = 'none';
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('app').classList.add('active');
+            
+            document.getElementById('headerPoints').textContent = currentUser.points || 0;
+            document.getElementById('myName').textContent = currentUser.name;
+            document.getElementById('myEmpno').textContent = '工号: ' + currentUser.empno;
+            document.getElementById('myPoints').textContent = currentUser.points || 0;
+            
+            loadAllData();
+        }
+
+        function doLogout() {
+            localStorage.removeItem('7s_user');
+            currentUser = null;
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('app').classList.remove('active');
+            document.getElementById('loginEmpno').value = '';
+            document.getElementById('loginName').value = '';
+        }
+
+        // ==================== 页面切换 ====================
+        function switchPage(pageId, navItem) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            
+            if (navItem) {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                navItem.classList.add('active');
+            }
+            
+            if (pageId === 'records') loadRecords();
+            if (pageId === 'ranking') loadLeaderboard();
+            if (pageId === 'my') loadMyData();
+        }
+
+        // ==================== 数据加载 ====================
+        async function loadAllData() {
+            const records = await getRecords();
+            const leaderboard = await getLeaderboard();
+            
+            // 首页统计
+            document.getElementById('statTotal').textContent = records.length;
+            document.getElementById('statMyPoints').textContent = currentUser.points || 0;
+            
+            // 我的排名
+            const myRank = leaderboard.findIndex(u => u.name === currentUser.name);
+            document.getElementById('statMyRank').textContent = myRank >= 0 ? myRank + 1 : '-';
+            
+            // TOP5排行榜
+            renderLeaderboard(leaderboard.slice(0, 5), 'topLeaderboard');
+            
+            // 最新记录
+            renderRecords(records.slice(0, 5), 'recentRecords');
+        }
+
+        async function getRecords() {
+            const { data, error } = await supabase
+                .from('records')
+                .select('*')
+                .order('created_at', { ascending: false });
+            return data || [];
+        }
+
+        async function getLeaderboard() {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .order('points', { ascending: false });
+            return data || [];
+        }
+
+        async function loadRecords() {
+            const records = await getRecords();
+            renderRecords(records, 'allRecords');
+            document.getElementById('recordsEmpty').style.display = records.length ? 'none' : 'block';
+        }
+
+        async function loadLeaderboard() {
+            const leaderboard = await getLeaderboard();
+            renderLeaderboard(leaderboard, 'fullLeaderboard');
+            document.getElementById('rankingEmpty').style.display = leaderboard.length ? 'none' : 'block';
+        }
+
+        async function loadMyData() {
+            const { data } = await supabase
+                .from('records')
+                .select('*')
+                .eq('empno', currentUser.empno)
+                .eq('name', currentUser.name)
+                .order('created_at', { ascending: false });
+            
+            renderRecords(data || [], 'myRecords');
+            document.getElementById('myEmpty').style.display = (data && data.length) ? 'none' : 'block';
+        }
+
+        function renderRecords(records, containerId) {
+            const container = document.getElementById(containerId);
+            if (!records.length) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            const categoryClasses = {
+                '整理': 'sort', '整顿': 'organize', '清扫': 'clean',
+                '清洁': 'purify', '素养': 'discipline', '安全': 'safety', '节约': 'save'
+            };
+            
+            container.innerHTML = records.map(r => {
+                const date = new Date(r.created_at);
+                const dateStr = `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}`;
+                const tagClass = `tag-${categoryClasses[r.category] || 'sort'}`;
+                
+                return `
+                    <li class="record-item ${categoryClasses[r.category] || ''}">
+                        <div class="record-header">
+                            <span class="record-tag ${tagClass}">${r.category}</span>
+                            <span class="record-time">${dateStr}</span>
+                        </div>
+                        <div class="record-desc">${r.description}</div>
+                        <div class="record-meta">
+                            <span>📍 ${r.location}</span>
+                            <span>🏭 ${r.department}</span>
+                            <span>👤 ${r.name}</span>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function renderLeaderboard(leaderboard, containerId) {
+            const container = document.getElementById(containerId);
+            const medals = ['🥇', '🥈', '🥉'];
+            
+            container.innerHTML = leaderboard.map((user, index) => `
+                <div class="leaderboard-item ${index < 3 ? 'top-' + (index + 1) : ''}">
+                    <div class="leaderboard-rank">${medals[index] || '#' + (index + 1)}</div>
+                    <div class="leaderboard-name">${user.name}</div>
+                    <div class="leaderboard-points">${user.points} 分</div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== 提交录入 ====================
+        async function submitEntry(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById('btnSubmit');
+            btn.innerHTML = '<span class="loading"></span>';
+            btn.disabled = true;
+            
+            try {
+                // 插入记录
+                const { data: record, error: recordError } = await supabase
+                    .from('records')
+                    .insert({
+                        empno: currentUser.empno,
+                        name: currentUser.name,
+                        category: document.getElementById('sevenSCategory').value,
+                        department: document.getElementById('department').value,
+                        location: document.getElementById('location').value,
+                        issue_type: document.getElementById('issueType').value,
+                        description: document.getElementById('description').value
+                    })
+                    .select()
+                    .single();
+                
+                if (recordError) throw recordError;
+                
+                // 更新积分
+                const newPoints = (currentUser.points || 0) + 1;
+                const { data: updatedUser, error: userError } = await supabase
+                    .from('users')
+                    .update({ points: newPoints })
+                    .eq('id', currentUser.id)
+                    .select()
+                    .single();
+                
+                if (userError) throw userError;
+                
+                currentUser = updatedUser;
+                localStorage.setItem('7s_user', JSON.stringify(currentUser));
+                
+                // 更新UI
+                document.getElementById('headerPoints').textContent = currentUser.points;
+                document.getElementById('myPoints').textContent = currentUser.points;
+                document.getElementById('statMyPoints').textContent = currentUser.points;
+                
+                // 显示成功弹窗
+                document.getElementById('dialogMessage').textContent = `获得1积分！当前积分: ${currentUser.points}`;
+                document.getElementById('successDialog').classList.add('active');
+                
+                // 重置表单
+                document.getElementById('entryForm').reset();
+                
+                // 刷新数据
+                loadAllData();
+            } catch (err) {
+                console.error(err);
+                showToast('提交失败，请重试', 'error');
+            } finally {
+                btn.innerHTML = '✅ 提交录入 (+1积分)';
+                btn.disabled = false;
+            }
+        }
+
+        function closeDialog() {
+            document.getElementById('successDialog').classList.remove('active');
+        }
+
+        // ==================== 消息提示 ====================
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✅' : '❌'}</span>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ==================== 初始化 ====================
+        (function init() {
+            if (checkConfig()) {
+                // 检查是否已登录
+                const savedUser = localStorage.getItem('7s_user');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                    enterApp();
+                } else {
+                    document.getElementById('loginPage').classList.remove('hidden');
+                }
+            }
+            
+            // 回车登录
+            document.getElementById('loginEmpno').addEventListener('keypress', e => {
+                if (e.key === 'Enter') document.getElementById('loginName').focus();
+            });
+            document.getElementById('loginName').addEventListener('keypress', e => {
+                if (e.key === 'Enter') doLogin();
+            });
+        })();
+    </script>
+</body>
+</html>
